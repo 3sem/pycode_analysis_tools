@@ -66,3 +66,33 @@ download_github_repo(algorithms_repo_url, algorithms_target_dir)
 aithor_repo_url = "https://github.com/allenai/ai2thor.git"
 aithor_target_dir = dataset_dir / "AI2-THOR"
 download_github_repo(aithor_repo_url, aithor_target_dir)
+
+#7 Download CodeChef Problem Solutions Dataset
+#codechef_dataset_url = "https://www.kaggle.com/datasets/raddar/codechef-problem-solutions"
+#codechef_target_dir = dataset_dir / "codechef-solutions"
+#download_kaggle_dataset("raddar/codechef-problem-solutions", codechef_target_dir)
+
+#8 Download LeetCode Solutions Dataset
+#leetcode_dataset_url = "https://www.kaggle.com/datasets/erichartford/leetcode-solutions"
+#leetcode_target_dir = dataset_dir / "leetcode-solutions"
+#download_kaggle_dataset("erichartford/leetcode-solutions", leetcode_target_dir)
+
+'''
+Summary of Labeled Datasets
+
+Dataset Name	                    Labeling Type	                            Source
+- Algorithm Detection in Code (ADC)	Algorithm type (e.g., sorting, searching)	ADC Dataset GitHub
+#- CodeChef Problem Solutions	    Problem difficulty and algorithm type	    CodeChef Dataset
+#- LeetCode Solutions Dataset	    Problem tags (e.g., binary search)	        LeetCode Solutions Dataset
+- Algorithmic PyCode Dataset (APCD)	Algorithm type (e.g., sorting, searching)	APCD Dataset GitHub
+- The Algorithms - Python	        Folder organization by algorithm type	    The Algorithms - Python GitHub
+- AI2-THOR Algorithmic Python Code	Task type (e.g., pathfinding)	            AI2-THOR GitHub
+
+Unlabeled Datasets
+
+- Rosetta Code Python Examples: Not explicitly labeled, but tasks are categorized by problem type.
+- GeeksforGeeks Python Code Examples: Not explicitly labeled, but examples are grouped by topic.
+
+
+
+'''
