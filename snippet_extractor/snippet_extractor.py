@@ -1,30 +1,17 @@
 import ast
-import pprint
+import os
 
 class CodeDependencyAnalyzer(ast.NodeVisitor):
     def __init__(self, target_function, code):
         self.target_function = target_function
         self.code_lines = code.splitlines()  # Split code into lines
-        self.dependencies = {
-            'functions': set(),
-            'methods': set(),
-            'classes': set(),
-            'variables': set(),
-            'globals': set(),
-            'imports': set(),
-            'objects': set()  # Track object instantiations
-        }
-        self.dependency_lines = {
-            'functions': [],
-            'methods': [],
-            'classes': [],
-            'variables': [],
-            'globals': [],
-            'imports': [],
-            'objects': []  # Track object instantiations
-        }
+        self.dependencies = {category: set() for category in [
+            'functions', 'methods', 'classes', 'variables', 'globals', 'imports', 'objects'
+        ]}
+        self.dependency_lines = {category: [] for category in self.dependencies}
         self.current_function = None
         self.target_function_lines = set()  # Track lines of the target function
+        
         self.global_definitions = {}  # Track global variable definitions
         self.used_globals = set()  # Track global variables used in the target function
         self.global_objects = set()  # Track global objects (e.g., classes, functions)
@@ -139,7 +126,12 @@ class CodeDependencyAnalyzer(ast.NodeVisitor):
     def analyze(self):
         tree = ast.parse("\n".join(self.code_lines))
         self.visit(tree)
-        return self.dependencies, self.dependency_lines, self.target_function_lines, self.global_definitions, self.used_globals, self.global_objects
+        return self.dependencies,\
+            self.dependency_lines,\
+            self.target_function_lines,\
+            self.global_definitions,\
+            self.used_globals,\
+            self.global_objects
 
 
 def extract_dependencies_with_code_lines(code, target_function):
@@ -164,11 +156,15 @@ class FunctionContextAnalyzer:
         self.used_globals: set
         self.global_objects: set
 
-    # Extract dependencies and their line numbers
+    # Run analysis
     def analyze(self):
-        self.dependencies, self.dependency_lines, self.target_function_lines, self.global_definitions, self.used_globals, self.global_objects = extract_dependencies_with_code_lines(self.code, self.target_function)
+        self.dependencies,\
+        self.dependency_lines,\
+        self.target_function_lines,\
+        self.global_definitions,\
+        self.used_globals,\
+        self.global_objects = extract_dependencies_with_code_lines(self.code, self.target_function)
 
-    # Print results
     def print_function_deps(self):
         print("Dependencies for function:", self.target_function)
         for category, items in self.dependencies.items():
@@ -176,7 +172,6 @@ class FunctionContextAnalyzer:
             for item in items:
                 print(f"  - {item}")
 
-        print("\nLines where dependencies occur:")
         for category, lines in self.dependency_lines.items():
             print(f"{category.capitalize()}:")
             for name, lineno, line in lines:
@@ -191,9 +186,9 @@ class FunctionContextAnalyzer:
         # Add lines of the target function
         for line_no in self.target_function_lines:
             line = self.code.splitlines()[line_no]
-            all_lines.append(("target_function", line_no + 1, line))  # +1 to match line numbers
+            all_lines.append(("target_function", line_no + 1, line))  # +1 just to match line numbers
 
-        # Add global definitions used in the target function
+        # Add globals definitions
         for global_var in self.used_globals:
             if global_var in self.global_definitions:
                 line_no = self.global_definitions[global_var]
@@ -207,7 +202,7 @@ class FunctionContextAnalyzer:
                 line = self.code.splitlines()[line_no]
                 all_lines.append(("global_object", line_no + 1, line))
 
-        # Sort the lines by line number
+        # Sort by line number
         sorted_lines = sorted(all_lines, key=lambda x: x[1])  # Sort by line number (index 1)
         
         def dedup_lines(sorted_lines: list) -> list:
@@ -223,55 +218,85 @@ class FunctionContextAnalyzer:
     
     def print_sorted_lines(self):
         csl = self.combine_and_sort_lines()
-        pprint.pprint([ln[2] for ln in csl])
+        for line in csl:
+            print(line[2])
 
     def output_code_snippet(self):
-        return "\n".join([t[2] for t in self.combine_and_sort_lines()])
+        def insert_on_indent(lines, new_str=" --- "):
+            result = []
+            for i in range(len(lines) - 1):
+                result.append(lines[i])
+                if len(lines[i + 1].lstrip()) > len(lines[i].lstrip()):
+                    result.append(new_str)
+                result.append(lines[-1])
+            return result
+        
+
+        return "\n".join(
+            [t[2] for t in self.combine_and_sort_lines()])
 
 
-def main(code=None):
-    if code is None:
-        code = """
-import os
-from math import sqrt
+def parse_files(file_paths):
+    parsed_files = {}
+    for file_path in file_paths:
+        with open(file_path, 'r') as file:
+            code = file.read()
+            parsed_files[file_path] = code
+    return parsed_files
 
-global_var = 10
 
-x_ = 11
+def find_target_file(parsed_files, target_function):
+    for file_path, code in parsed_files.items():
+        tree = ast.parse(code)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and node.name == target_function:
+                return file_path, code
+    return None, None
 
-class ExampleClass:
-    def method(self):
-        print("Method called")
 
-def helper_function():
-    global global_var
-    global_var += 6
-    print("Helper function")
-
-def example_function():
-    global x_
-    global global_var
-    x = global_var
+def process_dependencies(parsed_files, target_function, processed_functions=None):
+    if processed_functions is None:
+        processed_functions = set()
     
-    x=5 * x_
-    y = sqrt(x)
-    helper_function()
-    obj = ExampleClass()
-    obj.method()
-    """
-    code2 = """
-def example_function():
+    if target_function in processed_functions:
+        return ""
     
-    y=x
-    return y
-    """
-    fca = FunctionContextAnalyzer(code=code, target_function="example_function")
-    fca.analyze()
-    fca.print_function_deps() 
-    fca.print_sorted_lines()
-    print("# Final code snippet with dependencies, target function lines, and global definitions:")
-    print(fca.output_code_snippet())
+    processed_functions.add(target_function)
+    
+    target_file, target_code = find_target_file(parsed_files, target_function)
+    #print(f"processed {target_function} from {target_file}:\n{target_code}")
+    if not target_file:
+        return ""
+    
+    #print(f"Recursive processing of {target_function} from {target_code}")
+    analyzer = FunctionContextAnalyzer(target_function=target_function, code=target_code)
+    analyzer.analyze()
+    
+    code_snippet = analyzer.output_code_snippet()
+    
+    #print(f"Got code snippet:{code_snippet}")
+
+    dependencies = analyzer.dependencies['imports']
+    
+    for dependency in dependencies:
+        prefix = f"\n\n# Dependencies from {dependency}:\n"
+        if '.' in dependency:
+            _, func = dependency.split('.')
+            code_snippet += prefix + process_dependencies(parsed_files, func, processed_functions)
+        else:
+            code_snippet +=  prefix + process_dependencies(parsed_files, dependency, processed_functions)
+    
+    return code_snippet
+
+
+def main(file_paths, target_function):
+    parsed_files = parse_files(file_paths)
+    code_snippet = process_dependencies(parsed_files, target_function)
+    print("# Final code snippet with dependencies:")
+    print(code_snippet)
+
 
 if __name__ == "__main__":
-    # Inlined Python code as a string
-    main()
+    file_paths = ['tests' + os.sep + 'file1.py', 'tests' + os.sep + 'file2.py']
+    target_function = "main_function"
+    main(file_paths, target_function)
