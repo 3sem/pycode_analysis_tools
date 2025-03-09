@@ -6,5 +6,5 @@ If there are some external dependencies which are imported from external files p
 
 Note: 
 
-- tested only with functions as dependencies, no garanties for another categories of entities. Maybe should be improved.
+- tested only with functions as dependencies, no guaranties for another categories of entities. Maybe should be improved.
 - aliasing of dependencies by 'as' should be checked more carefully
