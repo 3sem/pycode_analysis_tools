@@ -1,3 +1,4 @@
+nefanov90, 2025.
 
 'Snippet extractor' extracts code snippet of target function with dependencies (functions, classes, variables, imports, globals, objects). 
 If there are some external dependencies which are imported from external files presented in input, it sets the dependency as a target and constructs the external code snippet recursively, populating the final snippet.
